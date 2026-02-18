@@ -1,13 +1,6 @@
 ---
 name: ambit-mcp
-description: >
-  Use this skill whenever you are operating through the Ambit MCP server to
-  deploy or manage apps on Fly.io. This covers the full MCP tool surface: app
-  lifecycle, deployment, machines, networking, secrets, scaling, volumes, and
-  router management. Trigger phrases include "deploy an app", "create an app",
-  "set up a new service", "check app status", "scale an app", "view logs",
-  "manage secrets", "set up a router", and any other Fly.io infrastructure task
-  performed through MCP tools.
+description: 'Use this skill whenever you are operating through the Ambit MCP server to deploy or manage apps on Fly.io. This covers the full MCP tool surface: app lifecycle, deployment, machines, networking, secrets, scaling, volumes, and router management. Trigger phrases include "deploy an app", "create an app", "set up a new service", "check app status", "scale an app", "view logs", "manage secrets", "set up a router", and any other Fly.io infrastructure task performed through MCP tools.'
 license: MIT
 metadata:
   author: ambit

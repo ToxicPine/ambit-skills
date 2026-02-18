@@ -1,12 +1,6 @@
 ---
 name: ambit-cli
-description: >
-  Use this skill for any task involving the ambit CLI: creating or destroying
-  private networks, deploying apps to a private network, checking network or
-  router health, listing routers, or diagnosing connectivity problems. Trigger
-  phrases include "create a network", "set up ambit", "deploy with ambit",
-  "ambit create", "ambit deploy", "ambit doctor", "check router status",
-  "destroy a network", and similar.
+description: 'Use this skill for any task involving the ambit CLI: creating or destroying private networks, deploying apps to a private network, checking network or router health, listing routers, or diagnosing connectivity problems. Trigger phrases include "create a network", "set up ambit", "deploy with ambit", "ambit create", "ambit deploy", "ambit doctor", "check router status", "destroy a network", and similar.'
 license: MIT
 metadata:
   author: ambit
