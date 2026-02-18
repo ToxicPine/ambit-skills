@@ -15,6 +15,14 @@ Chromatic gives an AI agent a browser. It deploys headless Chrome instances in t
 
 Browsers sleep when idle and wake in a couple of seconds when the agent makes a request, so the user only pays for the seconds the browser is actually running. Typical developer usage comes to around $2.50 a month.
 
+## Installation
+
+If `chromatic` is not already installed, run it directly via Nix:
+
+```bash
+nix run github:ToxicPine/ambit#chromatic
+```
+
 ## How It Works
 
 ```mermaid

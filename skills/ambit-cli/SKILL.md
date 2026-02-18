@@ -17,6 +17,14 @@ This matters because putting a database, dashboard, or internal tool on the norm
 
 Each private network you create is called an **ambit**. Every app deployed to it gets a human-readable address under that network's name — so `http://my-app.lab` means the `my-app` application on the `lab` ambit. These addresses work automatically for any device enrolled in the user's Tailscale account.
 
+## Installation
+
+If `ambit` is not already installed, run it directly via Nix:
+
+```bash
+nix run github:ToxicPine/ambit
+```
+
 ## How It Works
 
 ```mermaid
@@ -50,13 +58,14 @@ ambit create lab --self-approve
 - `--org <org>` — Fly.io organization slug
 - `--region <region>` — Fly.io region (default: `iad`)
 - `--api-key <key>` — Tailscale API access token (prompted interactively if omitted)
+- `--tag <tag>` — Tailscale ACL tag for the router (default: `tag:ambit-<network>`)
 - `--self-approve` — Approve subnet routes via Tailscale API instead of requiring autoApprovers in the ACL policy
 - `-y, --yes` — Skip confirmation prompts
 - `--json` — Output as JSON
 
 **What it does:**
 1. Validates Fly.io auth and the Tailscale API key
-2. Checks that `tag:ambit-<network>` exists in Tailscale ACL tagOwners
+2. Checks that the tag (default `tag:ambit-<network>`, or custom via `--tag`) exists in Tailscale ACL tagOwners
 3. Checks autoApprovers config (unless `--self-approve`)
 4. Creates a Fly.io app on the custom network
 5. Sets secrets: `TAILSCALE_API_TOKEN`, `NETWORK_NAME`, `TAILSCALE_TAGS`
@@ -65,7 +74,7 @@ ambit create lab --self-approve
 8. Configures split DNS (`*.<network>` → router)
 9. Enables accept-routes locally if possible
 
-**Before running**, the user must add this to their Tailscale ACL policy (via the Tailscale admin web UI):
+**Before running**, the user must add the router's tag to their Tailscale ACL policy (via the Tailscale admin web UI). The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`:
 ```json
 "tagOwners": { "tag:ambit-<network>": ["autogroup:admin"] }
 ```

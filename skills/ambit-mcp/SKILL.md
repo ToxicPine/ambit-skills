@@ -15,6 +15,14 @@ You are operating through the Ambit MCP server. This server gives you access to 
 
 Apps you deploy land on a private Ambit network (e.g. `lab`, `staging`, `personal`). They get addresses like `http://my-app.lab` that work for any device enrolled in the user's Tailscale network, and are unreachable from anywhere else. Tailscale is a VPN that links the user's devices into a sealed private network — devices enrolled in it can connect to each other; devices that aren't cannot.
 
+## Installation
+
+If `ambit-mcp` is not already installed, run it directly via Nix:
+
+```bash
+nix run github:ToxicPine/ambit#ambit-mcp
+```
+
 ## Operating Modes
 
 - **Safe Mode** (default): Private networking is enforced on every operation. Router management tools are available. Public IP allocation tools do not exist.
