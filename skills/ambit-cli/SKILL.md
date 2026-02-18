@@ -74,10 +74,7 @@ ambit create lab --self-approve
 8. Configures split DNS (`*.<network>` → router)
 9. Enables accept-routes locally if possible
 
-**Before running**, the user must add the router's tag to their Tailscale ACL policy (via the Tailscale admin web UI). The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`:
-```json
-"tagOwners": { "tag:ambit-<network>": ["autogroup:admin"] }
-```
+**Before running**, the user must add the router's tag in their Tailscale ACL settings at https://login.tailscale.com/admin/acls/visual/tags. The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`.
 
 And optionally (or use `--self-approve` to skip this):
 ```json
@@ -167,6 +164,11 @@ ambit create lab --self-approve
 ambit deploy my-app --network lab
 
 # 4. App is now reachable as http://my-app.lab from any device on the tailnet
+
+# 5. Invite people to your tailnet:
+#    https://login.tailscale.com/admin/users
+# 6. Control their access:
+#    https://login.tailscale.com/admin/acls/visual/general-access-rules
 ```
 
 ### Debugging Connectivity
@@ -187,7 +189,7 @@ ambit destroy --network lab
 
 | Symptom | Fix |
 |---------|-----|
-| "Tag not configured in tagOwners" | Add `"tag:ambit-<network>": ["autogroup:admin"]` to Tailscale ACL tagOwners. |
+| "Tag not configured in tagOwners" | Add the tag in Tailscale ACL settings: https://login.tailscale.com/admin/acls/visual/tags |
 | "autoApprovers not configured" | Either configure autoApprovers in the ACL or re-run with `--self-approve`. |
 | Router deployed but not reachable | Run `ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
