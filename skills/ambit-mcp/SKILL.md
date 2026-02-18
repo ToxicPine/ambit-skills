@@ -17,10 +17,10 @@ Apps you deploy land on a private Ambit network (e.g. `lab`, `staging`, `persona
 
 ## Installation
 
-If `ambit-mcp` is not already installed, run it directly via Nix:
+If `ambit-mcp` is not already installed, run it directly via npx:
 
 ```bash
-nix run github:ToxicPine/ambit#ambit-mcp
+npx @cardelli/mcp
 ```
 
 ## Operating Modes

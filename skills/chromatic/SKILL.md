@@ -17,10 +17,10 @@ Browsers sleep when idle and wake in a couple of seconds when the agent makes a 
 
 ## Installation
 
-If `chromatic` is not already installed, run it directly via Nix:
+If `chromatic` is not already installed, run it directly via npx:
 
 ```bash
-nix run github:ToxicPine/ambit#chromatic
+npx @cardelli/chromatic
 ```
 
 ## How It Works

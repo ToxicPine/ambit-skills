@@ -22,7 +22,7 @@ Each private network you create is called an **ambit**. Every app deployed to it
 If `ambit` is not already installed, run it directly via Nix:
 
 ```bash
-nix run github:ToxicPine/ambit
+npx @cardelli/ambit
 ```
 
 ## How It Works
@@ -189,7 +189,7 @@ ambit destroy --network lab
 
 | Symptom | Fix |
 |---------|-----|
-| "Tag not configured in tagOwners" | Add the tag in Tailscale ACL settings: https://login.tailscale.com/admin/acls/visual/tags |
+| "Tag not configured in tagOwners" | Add `"tag:ambit-<network>": ["autogroup:admin"]` to Tailscale ACL tagOwners. |
 | "autoApprovers not configured" | Either configure autoApprovers in the ACL or re-run with `--self-approve`. |
 | Router deployed but not reachable | Run `ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
