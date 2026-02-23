@@ -85,19 +85,47 @@ And optionally (or use `--self-approve` to skip this):
 
 Deploys an app onto a private network. This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
 
+There are three mutually exclusive deployment modes:
+
+**Config mode** (default) — uses a local `fly.toml`:
 ```bash
 ambit deploy my-app --network lab
+ambit deploy my-app --network lab --config ./custom.toml
+```
+
+**Image mode** — deploys a Docker image without fly.toml:
+```bash
 ambit deploy my-app --network lab --image registry.fly.io/my-app:latest
+ambit deploy my-app --network lab --image registry.fly.io/my-app:latest --main-port 3000
+```
+
+**Template mode** — fetches a template from a GitHub repository and deploys it:
+```bash
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
+ambit deploy my-shell --network lab --template ToxicPine/ambit-templates/wetty
 ```
 
 **Flags:**
 - `--network <name>` — Target network (required)
 - `--org <org>` — Fly.io organization
 - `--region <region>` — Primary region
-- `--image <img>` — Docker image to deploy (instead of fly.toml)
-- `--config <path>` — Explicit path to fly.toml
+- `--config <path>` — Explicit path to fly.toml (config mode)
+- `--image <img>` — Docker image to deploy (image mode)
+- `--main-port <port>` — Internal port for HTTP service in image mode (default: 80, "none" to skip)
+- `--template <ref>` — GitHub template reference (template mode)
 - `-y, --yes` — Skip confirmation
 - `--json` — Output as JSON
+
+**Template reference format:**
+```
+owner/repo/path             Fetch from the default branch
+owner/repo/path@tag         Fetch a tagged release
+owner/repo/path@branch      Fetch a specific branch
+owner/repo/path@commit      Fetch a specific commit
+```
+
+The template must contain a `fly.toml` (and typically a Dockerfile). The template is fetched from GitHub's tarball API, the target subdirectory is extracted, pre-flight scanned, and deployed. The temp directory is cleaned up automatically.
 
 ### `ambit list`
 
@@ -152,6 +180,22 @@ ambit doctor --network lab
 - Router(s) exist and machines are running
 - Router(s) visible in tailnet
 
+## Templates
+
+Ready-to-deploy templates are available at `ToxicPine/ambit-templates`:
+
+| Template | Description |
+|----------|-------------|
+| `ToxicPine/ambit-templates/chromatic` | Headless Chrome exposing Chrome DevTools Protocol on port 9222 — for AI agents or scripts that need a browser on the private network. |
+| `ToxicPine/ambit-templates/wetty` | A cloud devshell with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
+| `ToxicPine/ambit-templates/opencode` | A private OpenCode web workspace — Nix-based environment with persistent home and auto start/stop. |
+
+```bash
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-shell --network lab --template ToxicPine/ambit-templates/wetty
+ambit deploy my-code --network lab --template ToxicPine/ambit-templates/opencode
+```
+
 ## Common Workflows
 
 ### First-Time Setup
@@ -169,6 +213,12 @@ ambit deploy my-app --network lab
 #    https://login.tailscale.com/admin/users
 # 6. Control their access:
 #    https://login.tailscale.com/admin/acls/visual/general-access-rules
+```
+
+### Deploy from a Template
+```bash
+ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+# → headless Chrome at my-browser.lab:9222, reachable via CDP
 ```
 
 ### Debugging Connectivity

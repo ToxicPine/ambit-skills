@@ -36,11 +36,27 @@ To get a new app running on the private network, call tools in this order:
 
 1. **`fly_app_create`** — Create the app. In safe mode the network is set automatically.
 2. **`fly_secrets_set` with `stage: true`** — Set any API keys, database URLs, or tokens *before* deploying. Using `stage: true` queues the secrets without triggering a redeploy on an app that has no code yet.
-3. **`fly_deploy`** — Deploy the image or dockerfile. Safe mode auto-injects `--no-public-ips --flycast` and audits the result immediately.
+3. **`fly_deploy`** — Deploy the image, dockerfile, or template. Safe mode auto-injects `--no-public-ips --flycast` and audits the result immediately.
 4. **`fly_ip_allocate_flycast`** — Allocate a private Flycast IPv6 address on the correct network name. Without this step the app is running but nothing can reach it — the router has no address to forward traffic to.
 5. **`fly_app_status` and `fly_logs`** — Verify machines are running and check for startup errors.
 
 After this, the app is reachable from the user's tailnet as `http://<app-name>.<network>`.
+
+## Template Deployment
+
+`fly_deploy` supports a `template` field for deploying from GitHub-hosted templates. Pass a reference in the format `owner/repo/path[@ref]`:
+
+- `ToxicPine/ambit-templates/chromatic` — headless Chrome with CDP on port 9222
+- `ToxicPine/ambit-templates/wetty` — web terminal with persistent storage
+- `ToxicPine/ambit-templates/opencode` — Nix-based development environment
+
+The `template` field is mutually exclusive with `image` and `dockerfile`. When provided, the MCP server fetches the template from GitHub, extracts the target subdirectory, and deploys it. The template must contain a `fly.toml` (and typically a `Dockerfile`).
+
+Example workflow for deploying a browser via template:
+1. **`fly_app_create`** with name `my-browser`
+2. **`fly_deploy`** with `template: "ToxicPine/ambit-templates/chromatic"`
+3. **`fly_ip_allocate_flycast`** with the network name
+4. Browser is now reachable at `my-browser.<network>:9222` via CDP
 
 ## Key Rules
 
