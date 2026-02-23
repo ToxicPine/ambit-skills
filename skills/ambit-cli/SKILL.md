@@ -189,13 +189,13 @@ Ready-to-deploy templates are available at `ToxicPine/ambit-templates`:
 | `ToxicPine/ambit-templates/chromatic` | Headless Chrome exposing Chrome DevTools Protocol on port 9222 — for AI agents or scripts that need a browser on the private network. |
 | `ToxicPine/ambit-templates/wetty` | A cloud devshell with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
 | `ToxicPine/ambit-templates/opencode` | A private OpenCode web workspace — Nix-based environment with persistent home and auto start/stop. |
-| `ToxicPine/ambit-templates/openclaw` | A self-hosted OpenClaw instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
+| `ToxicPine/ambit-openclaw` | A self-hosted OpenClaw instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ```bash
 ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
 ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
 ambit deploy my-code.lab --template ToxicPine/ambit-templates/opencode
-ambit deploy my-gateway.lab --template ToxicPine/ambit-templates/openclaw
+ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
 ```
 
 ## Common Workflows
