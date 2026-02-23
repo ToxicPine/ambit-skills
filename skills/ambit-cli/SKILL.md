@@ -81,33 +81,33 @@ And optionally (or use `--self-approve` to skip this):
 "autoApprovers": { "routes": { "fdaa:X:XXXX::/48": ["tag:ambit-<network>"] } }
 ```
 
-### `ambit deploy <app> --network <name>`
+### `ambit deploy <app>.<network>`
 
-Deploys an app onto a private network. This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
+Deploys an app onto a private network. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`). This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
 
 There are three mutually exclusive deployment modes:
 
 **Config mode** (default) — uses a local `fly.toml`:
 ```bash
-ambit deploy my-app --network lab
-ambit deploy my-app --network lab --config ./custom.toml
+ambit deploy my-app.lab
+ambit deploy my-app.lab --config ./custom.toml
 ```
 
 **Image mode** — deploys a Docker image without fly.toml:
 ```bash
-ambit deploy my-app --network lab --image registry.fly.io/my-app:latest
-ambit deploy my-app --network lab --image registry.fly.io/my-app:latest --main-port 3000
+ambit deploy my-app.lab --image registry.fly.io/my-app:latest
+ambit deploy my-app.lab --image registry.fly.io/my-app:latest --main-port 3000
 ```
 
 **Template mode** — fetches a template from a GitHub repository and deploys it:
 ```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic@v1.0
-ambit deploy my-shell --network lab --template ToxicPine/ambit-templates/wetty
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
+ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
 ```
 
 **Flags:**
-- `--network <name>` — Target network (required)
+- `--network <name>` — Target network (alternative to the `app.network` shorthand)
 - `--org <org>` — Fly.io organization
 - `--region <region>` — Primary region
 - `--config <path>` — Explicit path to fly.toml (config mode)
@@ -189,11 +189,13 @@ Ready-to-deploy templates are available at `ToxicPine/ambit-templates`:
 | `ToxicPine/ambit-templates/chromatic` | Headless Chrome exposing Chrome DevTools Protocol on port 9222 — for AI agents or scripts that need a browser on the private network. |
 | `ToxicPine/ambit-templates/wetty` | A cloud devshell with a web terminal, persistent home directory, passwordless sudo, and auto start/stop. |
 | `ToxicPine/ambit-templates/opencode` | A private OpenCode web workspace — Nix-based environment with persistent home and auto start/stop. |
+| `ToxicPine/ambit-templates/openclaw` | A self-hosted OpenClaw instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
-ambit deploy my-shell --network lab --template ToxicPine/ambit-templates/wetty
-ambit deploy my-code --network lab --template ToxicPine/ambit-templates/opencode
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
+ambit deploy my-code.lab --template ToxicPine/ambit-templates/opencode
+ambit deploy my-gateway.lab --template ToxicPine/ambit-templates/openclaw
 ```
 
 ## Common Workflows
@@ -205,7 +207,7 @@ ambit deploy my-code --network lab --template ToxicPine/ambit-templates/opencode
 ambit create lab --self-approve
 
 # 3. Deploy an app
-ambit deploy my-app --network lab
+ambit deploy my-app.lab
 
 # 4. App is now reachable as http://my-app.lab from any device on the tailnet
 
@@ -217,7 +219,7 @@ ambit deploy my-app --network lab
 
 ### Deploy from a Template
 ```bash
-ambit deploy my-browser --network lab --template ToxicPine/ambit-templates/chromatic
+ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
 # → headless Chrome at my-browser.lab:9222, reachable via CDP
 ```
 

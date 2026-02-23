@@ -49,6 +49,7 @@ After this, the app is reachable from the user's tailnet as `http://<app-name>.<
 - `ToxicPine/ambit-templates/chromatic` — headless Chrome with CDP on port 9222
 - `ToxicPine/ambit-templates/wetty` — web terminal with persistent storage
 - `ToxicPine/ambit-templates/opencode` — Nix-based development environment
+- `ToxicPine/ambit-templates/openclaw` — self-hosted personal AI assistant reachable from WhatsApp, Telegram, Discord, etc.
 
 The `template` field is mutually exclusive with `image` and `dockerfile`. When provided, the MCP server fetches the template from GitHub, extracts the target subdirectory, and deploys it. The template must contain a `fly.toml` (and typically a `Dockerfile`).
 
