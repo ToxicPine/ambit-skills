@@ -119,13 +119,14 @@ ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
 
 **Template reference format:**
 ```
-owner/repo/path             Fetch from the default branch
+owner/repo                  Fetch repo root from the default branch
+owner/repo/path             Fetch subdirectory from the default branch
 owner/repo/path@tag         Fetch a tagged release
 owner/repo/path@branch      Fetch a specific branch
 owner/repo/path@commit      Fetch a specific commit
 ```
 
-The template must contain a `fly.toml` (and typically a Dockerfile). The template is fetched from GitHub's tarball API, the target subdirectory is extracted, pre-flight scanned, and deployed. The temp directory is cleaned up automatically.
+The template must contain a `fly.toml` (and typically a Dockerfile or a pre-built image reference). The template is fetched from GitHub's tarball API, extracted, pre-flight scanned, and deployed. The temp directory is cleaned up automatically.
 
 ### `ambit list`
 
@@ -149,13 +150,15 @@ ambit status --network lab
 
 Detailed view includes: machine state, SOCKS5 proxy address, Tailscale IP, online status, advertised routes, and split DNS config.
 
-### `ambit destroy --network <name>`
+### `ambit destroy network <name>` / `ambit destroy app <app>.<network>`
 
-Tears down a router and cleans up all associated resources. Apps deployed on the network are NOT deleted — only the router is removed. The user will need to manually remove ACL policy entries for the network tag.
+Destroys either a network (router) or a workload app.
+
+**Destroy a network** — tears down the router and cleans up all associated resources. Apps deployed on the network are NOT deleted — only the router is removed. The user will need to manually remove ACL policy entries for the network tag.
 
 ```bash
-ambit destroy --network lab
-ambit destroy --network lab --yes
+ambit destroy network lab
+ambit destroy network lab --yes
 ```
 
 **What it does:**
@@ -163,6 +166,14 @@ ambit destroy --network lab --yes
 2. Clears split DNS configuration
 3. Removes the Tailscale device
 4. Destroys the Fly.io app
+
+**Destroy an app** — removes a workload app from a network.
+
+```bash
+ambit destroy app my-app.lab
+ambit destroy app my-app --network lab
+ambit destroy app my-app.lab --yes
+```
 
 ### `ambit doctor`
 
@@ -231,7 +242,8 @@ ambit status --network lab    # Detailed router state
 
 ### Tearing Down
 ```bash
-ambit destroy --network lab
+ambit destroy app my-app.lab        # Remove an app
+ambit destroy network lab           # Remove the whole network
 # Then remove from Tailscale ACL:
 #   tagOwners: tag:ambit-lab
 #   autoApprovers: routes for tag:ambit-lab
