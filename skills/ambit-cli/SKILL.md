@@ -66,24 +66,27 @@ ambit create lab --self-approve
 **What it does:**
 1. Validates Fly.io auth and the Tailscale API key
 2. Checks that the tag (default `tag:ambit-<network>`, or custom via `--tag`) exists in Tailscale ACL tagOwners
-3. Checks autoApprovers config (unless `--self-approve`)
+3. Checks for duplicate routers on the same network
 4. Creates a Fly.io app on the custom network
-5. Sets secrets: `TAILSCALE_API_TOKEN`, `NETWORK_NAME`, `TAILSCALE_TAGS`
+5. Sets secrets: `TAILSCALE_API_TOKEN`, `NETWORK_NAME`, `TAILSCALE_TAGS`, `ROUTER_ID`
 6. Deploys the router container
-7. Waits for the device to join the tailnet
-8. Configures split DNS (`*.<network>` → router)
-9. Enables accept-routes locally if possible
+7. Waits for the device to join the tailnet and discovers the real subnet (e.g. `fdaa:4a:d38b::/48`)
+8. Checks autoApprovers config and prints recommended ACL rules with the real subnet
+9. Configures split DNS (`*.<network>` → router)
+10. Enables accept-routes locally if possible
 
 **Before running**, the user must add the router's tag in their Tailscale ACL settings at https://login.tailscale.com/admin/acls/visual/tags. The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`.
 
-And optionally (or use `--self-approve` to skip this):
+After the router is deployed, `ambit create` prints recommended ACL rules including the real subnet. For example:
 ```json
-"autoApprovers": { "routes": { "fdaa:X:XXXX::/48": ["tag:ambit-<network>"] } }
+"autoApprovers": { "routes": { "fdaa:4a:d38b::/48": ["tag:ambit-<network>"] } }
 ```
 
 ### `ambit deploy <app>.<network>`
 
 Deploys an app onto a private network. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`). This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
+
+The actual Fly.io app name is suffixed with the router's ID (e.g. `my-app-2obeh25b`) to avoid collisions across networks. This is transparent — you always refer to the app as `my-app.lab` and DNS resolves it automatically.
 
 There are three mutually exclusive deployment modes:
 
