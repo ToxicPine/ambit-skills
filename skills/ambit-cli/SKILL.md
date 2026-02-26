@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.2.0"
+  version: "0.2.1"
 ---
 
 # Ambit CLI
@@ -19,7 +19,7 @@ Each private network you create is called an **ambit**. Every app deployed to it
 
 ## Installation
 
-If `ambit` is not already installed, run it directly via Nix:
+Run directly via npx — no global install needed:
 
 ```bash
 npx @cardelli/ambit
@@ -48,14 +48,14 @@ The router never receives the user's Tailscale API token. During `ambit create`,
 
 ## Commands
 
-### `ambit create <network>`
+### `npx @cardelli/ambit create <network>`
 
 Creates a new private network. This is the first command to run when setting up a new ambit. It deploys a router on Fly.io, connects it to the user's Tailscale network, and configures split DNS so apps on the network are reachable by name.
 
 ```bash
-ambit create lab
-ambit create lab --org my-org --region sea
-ambit create lab --no-auto-approve
+npx @cardelli/ambit create lab
+npx @cardelli/ambit create lab --org my-org --region sea
+npx @cardelli/ambit create lab --no-auto-approve
 ```
 
 **Flags:**
@@ -82,14 +82,30 @@ ambit create lab --no-auto-approve
 
 Steps 8–11 are skipped when `--no-auto-approve` or `--json` is used.
 
-**Before running**, the user must add the router's tag in their Tailscale ACL settings at https://login.tailscale.com/admin/acls/visual/tags. The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`.
+**Before running**, the user must add the router's tag to their Tailscale ACL tagOwners. They can do this in two ways:
 
-After the router is deployed, `ambit create` prints recommended ACL rules including the real subnet. For example:
+1. **Visual editor** (recommended): Go to https://login.tailscale.com/admin/acls/visual/tags, click "Add tag", and add `tag:ambit-<network>` with `autogroup:admin` as the owner.
+
+2. **ACL file**: Go to https://login.tailscale.com/admin/acls/file and add to tagOwners:
+```json
+"tagOwners": { "tag:ambit-<network>": ["autogroup:admin"] }
+```
+
+**After the router is deployed**, the CLI prints recommended ACL configuration including the real subnet. You MUST surface this output to the user — it contains the actual subnet needed for ACL rules. The user can apply these settings either through:
+
+- **Visual editor**: https://login.tailscale.com/admin/acls/visual — navigate to Auto Approvers or Access Rules sections
+- **ACL file**: https://login.tailscale.com/admin/acls/file — paste the JSON from the terminal output
+
+Example terminal output to surface:
 ```json
 "autoApprovers": { "routes": { "fdaa:4a:d38b::/48": ["tag:ambit-<network>"] } }
 ```
+```json
+{"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["tag:ambit-<network>:53"]}
+{"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["fdaa:4a:d38b::/48:*"]}
+```
 
-### `ambit deploy <app>.<network>`
+### `npx @cardelli/ambit deploy <app>.<network>`
 
 Deploys an app onto a private network. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`). This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
 
@@ -99,21 +115,21 @@ There are three mutually exclusive deployment modes:
 
 **Config mode** (default) — uses a local `fly.toml`:
 ```bash
-ambit deploy my-app.lab
-ambit deploy my-app.lab --config ./custom.toml
+npx @cardelli/ambit deploy my-app.lab
+npx @cardelli/ambit deploy my-app.lab --config ./custom.toml
 ```
 
 **Image mode** — deploys a Docker image without fly.toml:
 ```bash
-ambit deploy my-app.lab --image registry.fly.io/my-app:latest
-ambit deploy my-app.lab --image registry.fly.io/my-app:latest --main-port 3000
+npx @cardelli/ambit deploy my-app.lab --image registry.fly.io/my-app:latest
+npx @cardelli/ambit deploy my-app.lab --image registry.fly.io/my-app:latest --main-port 3000
 ```
 
 **Template mode** — fetches a template from a GitHub repository and deploys it:
 ```bash
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
-ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic@v1.0
+npx @cardelli/ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
 ```
 
 **Flags:**
@@ -138,37 +154,37 @@ owner/repo/path@commit      Fetch a specific commit
 
 The template must contain a `fly.toml` (and typically a Dockerfile or a pre-built image reference). The template is fetched from GitHub's tarball API, extracted, pre-flight scanned, and deployed. The temp directory is cleaned up automatically.
 
-### `ambit list`
+### `npx @cardelli/ambit list`
 
 Lists all discovered routers across all networks.
 
 ```bash
-ambit list
-ambit list --org my-org --json
+npx @cardelli/ambit list
+npx @cardelli/ambit list --org my-org --json
 ```
 
 Shows: network name, app name, region, machine state, private IP, subnet, and Tailscale device status.
 
-### `ambit status`
+### `npx @cardelli/ambit status`
 
 Shows detailed router status. Run without `--network` to see all routers, or with `--network` to focus on one.
 
 ```bash
-ambit status
-ambit status --network lab
+npx @cardelli/ambit status
+npx @cardelli/ambit status --network lab
 ```
 
 Detailed view includes: machine state, SOCKS5 proxy address, Tailscale IP, online status, advertised routes, and split DNS config.
 
-### `ambit destroy network <name>` / `ambit destroy app <app>.<network>`
+### `npx @cardelli/ambit destroy network <name>` / `npx @cardelli/ambit destroy app <app>.<network>`
 
 Destroys either a network (router) or a workload app.
 
-**Destroy a network** — tears down the router and cleans up all associated resources. Apps deployed on the network are NOT deleted — only the router is removed. The user will need to manually remove ACL policy entries for the network tag.
+**Destroy a network** — tears down the router and cleans up all associated resources. Apps deployed on the network are NOT deleted — only the router is removed.
 
 ```bash
-ambit destroy network lab
-ambit destroy network lab --yes
+npx @cardelli/ambit destroy network lab
+npx @cardelli/ambit destroy network lab --yes
 ```
 
 **What it does:**
@@ -177,21 +193,25 @@ ambit destroy network lab --yes
 3. Removes the Tailscale device
 4. Destroys the Fly.io app
 
+After destroying a network, the user should clean up their Tailscale ACL policy. Tell them they can either:
+- **Visual editor**: Go to https://login.tailscale.com/admin/acls/visual and remove the tag from Tags, Auto Approvers, and Access Rules sections
+- **ACL file**: Go to https://login.tailscale.com/admin/acls/file and remove `tag:ambit-<network>` from `tagOwners`, `autoApprovers`, and `acls`
+
 **Destroy an app** — removes a workload app from a network.
 
 ```bash
-ambit destroy app my-app.lab
-ambit destroy app my-app --network lab
-ambit destroy app my-app.lab --yes
+npx @cardelli/ambit destroy app my-app.lab
+npx @cardelli/ambit destroy app my-app --network lab
+npx @cardelli/ambit destroy app my-app.lab --yes
 ```
 
-### `ambit doctor`
+### `npx @cardelli/ambit doctor`
 
 Health check for the local environment and router infrastructure. Run this whenever something seems wrong — it checks the most common failure points and gives remediation hints.
 
 ```bash
-ambit doctor
-ambit doctor --network lab
+npx @cardelli/ambit doctor
+npx @cardelli/ambit doctor --network lab
 ```
 
 **Checks:**
@@ -213,58 +233,74 @@ Ready-to-deploy templates are available at `ToxicPine/ambit-templates`:
 | `ToxicPine/ambit-openclaw` | A self-hosted OpenClaw instance — a personal AI assistant you can talk to from WhatsApp, Telegram, Discord, and other chat apps. |
 
 ```bash
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
-ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
-ambit deploy my-code.lab --template ToxicPine/ambit-templates/opencode
-ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+npx @cardelli/ambit deploy my-shell.lab --template ToxicPine/ambit-templates/wetty
+npx @cardelli/ambit deploy my-code.lab --template ToxicPine/ambit-templates/opencode
+npx @cardelli/ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
 ```
 
 ## Common Workflows
 
 ### First-Time Setup
 ```bash
-# 1. Add tag to Tailscale ACL policy in the web UI
+# 1. Add tag to Tailscale ACL:
+#    Visual editor: https://login.tailscale.com/admin/acls/visual/tags
+#    Or ACL file:   https://login.tailscale.com/admin/acls/file
+
 # 2. Create the router
-ambit create lab
+npx @cardelli/ambit create lab
 
-# 3. Deploy an app
-ambit deploy my-app.lab
+# 3. IMPORTANT: Read the terminal output — it prints recommended ACL rules
+#    with the real subnet. Surface these to the user so they can configure
+#    autoApprovers and access rules.
 
-# 4. App is now reachable as http://my-app.lab from any device on the tailnet
+# 4. Deploy an app
+npx @cardelli/ambit deploy my-app.lab
 
-# 5. Invite people to your tailnet:
-#    https://login.tailscale.com/admin/users
-# 6. Control their access:
-#    https://login.tailscale.com/admin/acls/visual/general-access-rules
+# 5. App is now reachable as http://my-app.lab from any device on the tailnet
+
+# 6. To control access, the user can:
+#    - Invite people: https://login.tailscale.com/admin/users
+#    - Set access rules: https://login.tailscale.com/admin/acls/visual/general-access-rules
 ```
 
 ### Deploy from a Template
 ```bash
-ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
+npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/chromatic
 # → headless Chrome at my-browser.lab:9222, reachable via CDP
 ```
 
 ### Debugging Connectivity
 ```bash
-ambit doctor --network lab    # Check all the common failure points
-ambit status --network lab    # Detailed router state
+npx @cardelli/ambit doctor --network lab    # Check all the common failure points
+npx @cardelli/ambit status --network lab    # Detailed router state
 ```
 
 ### Tearing Down
 ```bash
-ambit destroy app my-app.lab        # Remove an app
-ambit destroy network lab           # Remove the whole network
-# Then remove from Tailscale ACL:
-#   tagOwners: tag:ambit-lab
-#   autoApprovers: routes for tag:ambit-lab
+npx @cardelli/ambit destroy app my-app.lab        # Remove an app
+npx @cardelli/ambit destroy network lab           # Remove the whole network
+# Then clean up Tailscale ACL:
+#   Visual editor: https://login.tailscale.com/admin/acls/visual
+#   Or ACL file:   remove tag:ambit-lab from tagOwners, autoApprovers, acls
 ```
+
+## ACL Configuration Guide
+
+When `ambit create` or `ambit destroy` requires ACL changes, always tell the user they have two options:
+
+1. **Visual editor** (easier for most users): Direct them to the relevant section at https://login.tailscale.com/admin/acls/visual — Tags, Auto Approvers, or Access Rules.
+
+2. **ACL file** (for users who prefer code): Direct them to https://login.tailscale.com/admin/acls/file and provide the exact JSON from the terminal output.
+
+Always surface the terminal output from `ambit create` that contains the real subnet and recommended rules — the user needs this information to configure their ACL correctly.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| "Tag not configured in tagOwners" | Add `"tag:ambit-<network>": ["autogroup:admin"]` to Tailscale ACL tagOwners. |
-| Router deployed but not reachable | Run `ambit doctor`. Check that accept-routes is enabled locally. |
+| "Tag not configured in tagOwners" | Add `tag:ambit-<network>` in the visual editor at https://login.tailscale.com/admin/acls/visual/tags, or add `"tag:ambit-<network>": ["autogroup:admin"]` to tagOwners in the ACL file. |
+| Router deployed but not reachable | Run `npx @cardelli/ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
-| Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `ambit status --network <name>`. Check the router is online in the tailnet. |
+| Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `npx @cardelli/ambit status --network <name>`. Check the router is online in the tailnet. |
 | "Flyctl not found" | Install from https://fly.io/docs/flyctl/install/ |
