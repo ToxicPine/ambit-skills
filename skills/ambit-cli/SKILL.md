@@ -167,14 +167,16 @@ Shows: network name, app name, region, machine state, private IP, subnet, and Ta
 
 ### `npx @cardelli/ambit status`
 
-Shows detailed router status. Run without `--network` to see all routers, or with `--network` to focus on one.
+Shows router and app status. Without a subcommand, defaults to showing all routers (same as `status network`).
 
 ```bash
-npx @cardelli/ambit status
-npx @cardelli/ambit status --network lab
+npx @cardelli/ambit status                          # Summary of all routers
+npx @cardelli/ambit status network lab              # Detailed view of one network
+npx @cardelli/ambit status app my-app.lab           # Detailed view of one app
+npx @cardelli/ambit status app my-app.lab --json    # JSON output
 ```
 
-Detailed view includes: machine state, SOCKS5 proxy address, Tailscale IP, online status, advertised routes, and split DNS config.
+Network detail includes: machine state, SOCKS5 proxy address, Tailscale IP, subnet, and apps on the network. App detail includes: machines, Flycast IPs, and router status.
 
 ### `npx @cardelli/ambit destroy network <name>` / `npx @cardelli/ambit destroy app <app>.<network>`
 
@@ -207,11 +209,13 @@ npx @cardelli/ambit destroy app my-app.lab --yes
 
 ### `npx @cardelli/ambit doctor`
 
-Health check for the local environment and router infrastructure. Run this whenever something seems wrong — it checks the most common failure points and gives remediation hints.
+Health check for the local environment and router infrastructure. Run this whenever something seems wrong — it checks the most common failure points and gives remediation hints. Without a subcommand, defaults to checking all routers (same as `doctor network`).
 
 ```bash
-npx @cardelli/ambit doctor
-npx @cardelli/ambit doctor --network lab
+npx @cardelli/ambit doctor                          # Check all routers
+npx @cardelli/ambit doctor network lab              # Check one network
+npx @cardelli/ambit doctor app my-app.lab           # Check one app + its router
+npx @cardelli/ambit doctor app my-app.lab --json    # JSON output
 ```
 
 **Checks:**
@@ -220,6 +224,7 @@ npx @cardelli/ambit doctor --network lab
 - Accept-routes enabled
 - Router(s) exist and machines are running
 - Router(s) visible in tailnet
+- Subnet routes approved (auto-approves unapproved routes)
 
 ## Templates
 
@@ -272,8 +277,9 @@ npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/c
 
 ### Debugging Connectivity
 ```bash
-npx @cardelli/ambit doctor --network lab    # Check all the common failure points
-npx @cardelli/ambit status --network lab    # Detailed router state
+npx @cardelli/ambit doctor network lab      # Check all the common failure points
+npx @cardelli/ambit status network lab      # Detailed router state
+npx @cardelli/ambit status app my-app.lab   # Check a specific app
 ```
 
 ### Tearing Down
@@ -302,5 +308,5 @@ Always surface the terminal output from `ambit create` that contains the real su
 | "Tag not configured in tagOwners" | Add `tag:ambit-<network>` in the visual editor at https://login.tailscale.com/admin/acls/visual/tags, or add `"tag:ambit-<network>": ["autogroup:admin"]` to tagOwners in the ACL file. |
 | Router deployed but not reachable | Run `npx @cardelli/ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
-| Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `npx @cardelli/ambit status --network <name>`. Check the router is online in the tailnet. |
+| Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `npx @cardelli/ambit status network <name>`. Check the router is online in the tailnet. |
 | "Flyctl not found" | Install from https://fly.io/docs/flyctl/install/ |
