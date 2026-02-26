@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.2.1"
+  version: "0.3.0"
 ---
 
 # Ambit CLI
@@ -63,13 +63,14 @@ npx @cardelli/ambit create lab --no-auto-approve
 - `--region <region>` — Fly.io region (default: `iad`)
 - `--api-key <key>` — Tailscale API access token (prompted interactively if omitted)
 - `--tag <tag>` — Tailscale ACL tag for the router (default: `tag:ambit-<network>`)
+- `--manual` — Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
 - `--no-auto-approve` — Skip waiting for router and approving routes (deploy only, configure later)
 - `-y, --yes` — Skip confirmation prompts
 - `--json` — Output as JSON (implies `--no-auto-approve`)
 
 **What it does:**
 1. Validates Fly.io auth and the Tailscale API key
-2. Checks that the tag (default `tag:ambit-<network>`, or custom via `--tag`) exists in Tailscale ACL tagOwners
+2. Auto-configures ACL: adds the tag to `tagOwners` and `autoApprovers` in the Tailscale policy (skipped with `--manual`)
 3. Checks for duplicate routers on the same network
 4. Creates a Fly.io app on the custom network
 5. Mints a single-use, tag-scoped Tailscale auth key (never sends the API token to the router)
@@ -82,7 +83,7 @@ npx @cardelli/ambit create lab --no-auto-approve
 
 Steps 8–11 are skipped when `--no-auto-approve` or `--json` is used.
 
-**Before running**, the user must add the router's tag to their Tailscale ACL tagOwners. They can do this in two ways:
+**ACL auto-configuration:** By default, ambit patches the Tailscale policy to add `tagOwners` and `autoApprovers` entries for the router's tag. This requires an API token with ACL write permission (`policy_file` scope). If the token lacks that permission (HTTP 403), ambit will fail and instruct the user to re-run with `--manual`. With `--manual`, the user must configure the policy themselves before the router can join the tailnet:
 
 1. **Visual editor** (recommended): Go to https://login.tailscale.com/admin/acls/visual/tags, click "Add tag", and add `tag:ambit-<network>` with `autogroup:admin` as the owner.
 
@@ -91,19 +92,44 @@ Steps 8–11 are skipped when `--no-auto-approve` or `--json` is used.
 "tagOwners": { "tag:ambit-<network>": ["autogroup:admin"] }
 ```
 
-**After the router is deployed**, the CLI prints recommended ACL configuration including the real subnet. You MUST surface this output to the user — it contains the actual subnet needed for ACL rules. The user can apply these settings either through:
+**After the router is deployed**, the CLI prints recommended ACL rules including the real subnet. Surface this output to the user — it contains the subnet needed for `acls` access rules (which ambit never configures automatically):
 
-- **Visual editor**: https://login.tailscale.com/admin/acls/visual — navigate to Auto Approvers or Access Rules sections
-- **ACL file**: https://login.tailscale.com/admin/acls/file — paste the JSON from the terminal output
-
-Example terminal output to surface:
-```json
-"autoApprovers": { "routes": { "fdaa:4a:d38b::/48": ["tag:ambit-<network>"] } }
-```
 ```json
 {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["tag:ambit-<network>:53"]}
 {"action": "accept", "src": ["group:YOUR_GROUP"], "dst": ["fdaa:4a:d38b::/48:*"]}
 ```
+
+### `npx @cardelli/ambit share <network> <member> [<member>...]`
+
+Grants one or more members access to a network by adding two accept rules per member to the `acls` section of the Tailscale policy:
+
+1. **DNS rule**: `<member> → <tag>:53` — lets the member resolve `*.<network>` names
+2. **Subnet rule**: `<member> → <subnet>:*` — lets the member reach all apps on the network
+
+Each member must be one of: a `group:<name>` string, a `tag:<name>` string, an `autogroup:<name>` string, or a valid email address. All members are Zod-validated before any API calls are made.
+
+```bash
+npx @cardelli/ambit share browsers group:team
+npx @cardelli/ambit share browsers group:team alice@example.com group:contractors
+npx @cardelli/ambit share browsers group:team --org my-org
+```
+
+**Flags:**
+- `--org <org>` — Fly.io organization slug
+- `--json` — Output as JSON
+
+**What it does:**
+1. Validates all members (fails with clear errors before touching the API)
+2. Discovers the router for the network (dies if not found)
+3. Gets the subnet from the router's machine
+4. Gets the tag from the router's Tailscale device (falls back to `tag:ambit-<network>`)
+5. Reads the current ACL policy
+6. Idempotently adds DNS and subnet accept rules for each member
+7. Runs a sanity check (`assertAdditivePatch`) to verify no existing data was accidentally removed
+8. Validates the updated policy against the Tailscale API before writing
+9. Pushes the updated policy in a single call
+
+The command is idempotent — re-running it when rules already exist is safe (no duplicates). Requires a Tailscale API token with ACL write permission (`policy_file` scope). Fails with a clear error on 403.
 
 ### `npx @cardelli/ambit deploy <app>.<network>`
 
@@ -187,6 +213,7 @@ Destroys either a network (router) or a workload app.
 ```bash
 npx @cardelli/ambit destroy network lab
 npx @cardelli/ambit destroy network lab --yes
+npx @cardelli/ambit destroy network lab --manual   # skip ACL cleanup
 ```
 
 **What it does:**
@@ -194,10 +221,13 @@ npx @cardelli/ambit destroy network lab --yes
 2. Clears split DNS configuration
 3. Removes the Tailscale device
 4. Destroys the Fly.io app
+5. Auto-cleans ACL: removes the tag from `tagOwners` and `autoApprovers` in the Tailscale policy (skipped with `--manual`)
 
-After destroying a network, the user should clean up their Tailscale ACL policy. Tell them they can either:
-- **Visual editor**: Go to https://login.tailscale.com/admin/acls/visual and remove the tag from Tags, Auto Approvers, and Access Rules sections
-- **ACL file**: Go to https://login.tailscale.com/admin/acls/file and remove `tag:ambit-<network>` from `tagOwners`, `autoApprovers`, and `acls`
+`--manual` skips the ACL cleanup step (step 5). Use it when the API token lacks ACL write permission, or when the user manages the policy themselves. If ACL cleanup fails with a 403, ambit warns and suggests re-running with `--manual`.
+
+After destroying, the user still needs to manually remove any `acls` rules referencing the tag (ambit never touches `acls` entries automatically). Tell them they can do this either:
+- **Visual editor**: Go to https://login.tailscale.com/admin/acls/visual and remove rules from the Access Rules section
+- **ACL file**: Go to https://login.tailscale.com/admin/acls/file and remove entries referencing `tag:ambit-<network>` from `acls`
 
 **Destroy an app** — removes a workload app from a network.
 
@@ -248,25 +278,37 @@ npx @cardelli/ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
 
 ### First-Time Setup
 ```bash
-# 1. Add tag to Tailscale ACL:
-#    Visual editor: https://login.tailscale.com/admin/acls/visual/tags
-#    Or ACL file:   https://login.tailscale.com/admin/acls/file
-
-# 2. Create the router
+# 1. Create the router — ambit auto-configures ACL (tagOwners + autoApprovers)
 npx @cardelli/ambit create lab
 
-# 3. IMPORTANT: Read the terminal output — it prints recommended ACL rules
-#    with the real subnet. Surface these to the user so they can configure
-#    autoApprovers and access rules.
+# 2. IMPORTANT: Read the terminal output — it prints recommended acls rules
+#    with the real subnet. Surface these to the user so they can restrict
+#    who on their tailnet can reach this network (ambit never writes acls rules).
 
-# 4. Deploy an app
+# 3. Deploy an app
 npx @cardelli/ambit deploy my-app.lab
 
-# 5. App is now reachable as http://my-app.lab from any device on the tailnet
+# 4. App is now reachable as http://my-app.lab from any device on the tailnet
 
-# 6. To control access, the user can:
+# 5. Share the network with a group (adds acls rules automatically):
+npx @cardelli/ambit share lab group:team
+
+# 6. To fine-tune access further:
 #    - Invite people: https://login.tailscale.com/admin/users
-#    - Set access rules: https://login.tailscale.com/admin/acls/visual/general-access-rules
+#    - Edit access rules: https://login.tailscale.com/admin/acls/visual/general-access-rules
+
+# If the API token lacks ACL write permission, use --manual and configure ACL manually first:
+# npx @cardelli/ambit create lab --manual
+```
+
+### Sharing a Network with a Team
+```bash
+npx @cardelli/ambit share browsers group:team                          # single group
+npx @cardelli/ambit share browsers group:team alice@example.com        # group + user
+npx @cardelli/ambit share browsers group:team group:contractors        # multiple groups
+# Adds two acls rules per member: DNS (tag:53) + subnet (*:*)
+# All members validated (group:*, tag:*, autogroup:*, or email) before any API call
+# Idempotent — safe to re-run
 ```
 
 ### Deploy from a Template
@@ -286,26 +328,44 @@ npx @cardelli/ambit status app my-app.lab   # Check a specific app
 ```bash
 npx @cardelli/ambit destroy app my-app.lab        # Remove an app
 npx @cardelli/ambit destroy network lab           # Remove the whole network
-# Then clean up Tailscale ACL:
-#   Visual editor: https://login.tailscale.com/admin/acls/visual
-#   Or ACL file:   remove tag:ambit-lab from tagOwners, autoApprovers, acls
+# ambit auto-removes tag:ambit-lab from tagOwners and autoApprovers in the ACL
+
+# The user still needs to manually remove any acls rules referencing the tag:
+#   Visual editor: https://login.tailscale.com/admin/acls/visual (Access Rules section)
+#   Or ACL file:   remove entries referencing tag:ambit-lab from acls
+
+# If the API token lacks ACL write permission, use --manual to skip ACL cleanup:
+# npx @cardelli/ambit destroy network lab --manual
 ```
 
 ## ACL Configuration Guide
 
-When `ambit create` or `ambit destroy` requires ACL changes, always tell the user they have two options:
+Ambit automatically manages `tagOwners` and `autoApprovers` in the Tailscale policy by default. It never touches `acls` (access rules) — those are user-authored and must be configured manually.
+
+**What ambit manages automatically (default):**
+- `tagOwners`: adds/removes the router tag on `create`/`destroy network`
+- `autoApprovers.routes`: adds/removes the subnet route on `create`/`destroy network`
+
+**What `ambit share` configures:**
+- `acls`: adds accept rules for a group → tag:53 and group → subnet:* (DNS + data access)
+
+**What the user must configure manually (when not using `ambit share`):**
+- `acls`: custom rules restricting which users/devices can reach the network (ambit prints the recommended format after `create`)
+
+When `ambit create` or `ambit destroy` fails with an ACL permission error, tell the user to re-run with `--manual` and then configure the policy themselves. They have two options:
 
 1. **Visual editor** (easier for most users): Direct them to the relevant section at https://login.tailscale.com/admin/acls/visual — Tags, Auto Approvers, or Access Rules.
 
 2. **ACL file** (for users who prefer code): Direct them to https://login.tailscale.com/admin/acls/file and provide the exact JSON from the terminal output.
 
-Always surface the terminal output from `ambit create` that contains the real subnet and recommended rules — the user needs this information to configure their ACL correctly.
+Always surface the terminal output from `ambit create` that contains the real subnet and recommended `acls` rules — the user needs this to restrict access to the network.
 
 ## Troubleshooting
 
 | Symptom | Fix |
 |---------|-----|
-| "Tag not configured in tagOwners" | Add `tag:ambit-<network>` in the visual editor at https://login.tailscale.com/admin/acls/visual/tags, or add `"tag:ambit-<network>": ["autogroup:admin"]` to tagOwners in the ACL file. |
+| "ACL write permission denied" / HTTP 403 | The API token lacks `policy_file` write scope. For `create`/`destroy network` re-run with `--manual`. For `share`, use a token with `policy_file` scope. |
+| "Tag not configured in tagOwners" (with `--manual`) | Add `tag:ambit-<network>` in the visual editor at https://login.tailscale.com/admin/acls/visual/tags, or add `"tag:ambit-<network>": ["autogroup:admin"]` to tagOwners in the ACL file. |
 | Router deployed but not reachable | Run `npx @cardelli/ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
 | Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `npx @cardelli/ambit status network <name>`. Check the router is online in the tailnet. |
