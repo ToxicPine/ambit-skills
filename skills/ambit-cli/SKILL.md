@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.1.0"
+  version: "0.2.0"
 ---
 
 # Ambit CLI
@@ -35,6 +35,10 @@ graph LR
 
 Ambit creates a router on Fly.io that joins the user's Tailscale network and advertises the private IPv6 subnet for that ambit. It also sets up split DNS so that `*.<network>` queries resolve to the right app. Apps deployed with `ambit deploy` get a private Flycast address on the network and never receive a public IP.
 
+## Security Model
+
+The router never receives the user's Tailscale API token. During `ambit create`, the CLI mints a single-use, tag-scoped auth key (5-minute expiry) and passes only that to the router. The auth key is consumed on first boot and is worthless afterwards. Route approval is handled by the CLI, not the router.
+
 ## Prerequisites
 
 - `flyctl` installed and authenticated (`fly auth login`)
@@ -51,7 +55,7 @@ Creates a new private network. This is the first command to run when setting up 
 ```bash
 ambit create lab
 ambit create lab --org my-org --region sea
-ambit create lab --self-approve
+ambit create lab --no-auto-approve
 ```
 
 **Flags:**
@@ -59,21 +63,24 @@ ambit create lab --self-approve
 - `--region <region>` — Fly.io region (default: `iad`)
 - `--api-key <key>` — Tailscale API access token (prompted interactively if omitted)
 - `--tag <tag>` — Tailscale ACL tag for the router (default: `tag:ambit-<network>`)
-- `--self-approve` — Approve subnet routes via Tailscale API instead of requiring autoApprovers in the ACL policy
+- `--no-auto-approve` — Skip waiting for router and approving routes (deploy only, configure later)
 - `-y, --yes` — Skip confirmation prompts
-- `--json` — Output as JSON
+- `--json` — Output as JSON (implies `--no-auto-approve`)
 
 **What it does:**
 1. Validates Fly.io auth and the Tailscale API key
 2. Checks that the tag (default `tag:ambit-<network>`, or custom via `--tag`) exists in Tailscale ACL tagOwners
 3. Checks for duplicate routers on the same network
 4. Creates a Fly.io app on the custom network
-5. Sets secrets: `TAILSCALE_API_TOKEN`, `NETWORK_NAME`, `TAILSCALE_TAGS`, `ROUTER_ID`
-6. Deploys the router container
-7. Waits for the device to join the tailnet and discovers the real subnet (e.g. `fdaa:4a:d38b::/48`)
-8. Checks autoApprovers config and prints recommended ACL rules with the real subnet
-9. Configures split DNS (`*.<network>` → router)
-10. Enables accept-routes locally if possible
+5. Mints a single-use, tag-scoped Tailscale auth key (never sends the API token to the router)
+6. Sets secrets: `TAILSCALE_AUTHKEY`, `NETWORK_NAME`, `ROUTER_ID`
+7. Deploys the router container
+8. Waits for the device to join the tailnet and discovers the real subnet (e.g. `fdaa:4a:d38b::/48`)
+9. Approves subnet routes via API if autoApprovers is not configured in ACL
+10. Configures split DNS (`*.<network>` → router)
+11. Enables accept-routes locally if possible
+
+Steps 8–11 are skipped when `--no-auto-approve` or `--json` is used.
 
 **Before running**, the user must add the router's tag in their Tailscale ACL settings at https://login.tailscale.com/admin/acls/visual/tags. The tag defaults to `tag:ambit-<network>` but can be overridden with `--tag`.
 
@@ -218,7 +225,7 @@ ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
 ```bash
 # 1. Add tag to Tailscale ACL policy in the web UI
 # 2. Create the router
-ambit create lab --self-approve
+ambit create lab
 
 # 3. Deploy an app
 ambit deploy my-app.lab
@@ -257,7 +264,6 @@ ambit destroy network lab           # Remove the whole network
 | Symptom | Fix |
 |---------|-----|
 | "Tag not configured in tagOwners" | Add `"tag:ambit-<network>": ["autogroup:admin"]` to Tailscale ACL tagOwners. |
-| "autoApprovers not configured" | Either configure autoApprovers in the ACL or re-run with `--self-approve`. |
 | Router deployed but not reachable | Run `ambit doctor`. Check that accept-routes is enabled locally. |
 | "Timeout waiting for device" | Check router logs. Most common cause: expired or invalid Tailscale API key. |
 | Apps not resolving as `<app>.<network>` | Verify split DNS is configured: `ambit status --network <name>`. Check the router is online in the tailnet. |
