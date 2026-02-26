@@ -35,15 +35,10 @@ graph LR
 
 Ambit creates a router on Fly.io that joins the user's Tailscale network and advertises the private IPv6 subnet for that ambit. It also sets up split DNS so that `*.<network>` queries resolve to the right app. Apps deployed with `ambit deploy` get a private Flycast address on the network and never receive a public IP.
 
-## Security Model
-
-The router never receives the user's Tailscale API token. During `ambit create`, the CLI mints a single-use, tag-scoped auth key (5-minute expiry) and passes only that to the router. The auth key is consumed on first boot and is worthless afterwards. Route approval is handled by the CLI, not the router.
-
 ## Prerequisites
 
 - `flyctl` installed and authenticated (`fly auth login`)
 - Tailscale installed and connected (`tailscale up`)
-- Accept-routes enabled (`sudo tailscale set --accept-routes`)
 - A Tailscale API access token (`tskey-api-...`) — create one at https://login.tailscale.com/admin/settings/keys
 
 ## Commands
