@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.3.0"
+  version: "0.3.1"
 ---
 
 # Ambit CLI
@@ -175,23 +175,31 @@ owner/repo/path@commit      Fetch a specific commit
 
 The template must contain a `fly.toml` (and typically a Dockerfile or a pre-built image reference). The template is fetched from GitHub's tarball API, extracted, pre-flight scanned, and deployed. The temp directory is cleaned up automatically.
 
-### `npx @cardelli/ambit list`
+### `npx @cardelli/ambit list networks`
 
-Lists all discovered routers across all networks.
+Lists all networks and their routers in a table showing the network name, app name, region, machine state, Tailscale connectivity status, and ACL tag.
 
 ```bash
-npx @cardelli/ambit list
-npx @cardelli/ambit list --org my-org --json
+npx @cardelli/ambit list networks
+npx @cardelli/ambit list networks --org my-org --json
 ```
 
-Shows: network name, app name, region, machine state, private IP, subnet, and Tailscale device status.
+### `npx @cardelli/ambit list apps <network>`
+
+Lists all workload apps on a specific network in a table showing the app name, region, and machine state.
+
+```bash
+npx @cardelli/ambit list apps lab
+npx @cardelli/ambit list apps lab --json
+```
 
 ### `npx @cardelli/ambit status`
 
-Shows router and app status. Without a subcommand, defaults to showing all routers (same as `status network`).
+Shows network and app status. Without a subcommand, defaults to showing all networks (same as `status networks`).
 
 ```bash
-npx @cardelli/ambit status                          # Summary of all routers
+npx @cardelli/ambit status                          # Summary of all networks
+npx @cardelli/ambit status networks                 # Same as above
 npx @cardelli/ambit status network lab              # Detailed view of one network
 npx @cardelli/ambit status app my-app.lab           # Detailed view of one app
 npx @cardelli/ambit status app my-app.lab --json    # JSON output
@@ -315,8 +323,9 @@ npx @cardelli/ambit deploy my-browser.lab --template ToxicPine/ambit-templates/c
 ### Debugging Connectivity
 ```bash
 npx @cardelli/ambit doctor network lab      # Check all the common failure points
-npx @cardelli/ambit status network lab      # Detailed router state
+npx @cardelli/ambit status network lab      # Detailed network/router state
 npx @cardelli/ambit status app my-app.lab   # Check a specific app
+npx @cardelli/ambit list apps lab           # List all apps on a network
 ```
 
 ### Tearing Down
