@@ -78,11 +78,11 @@ npx @cardelli/ambit create lab --no-auto-approve
 
 Steps 8–11 are skipped when `--no-auto-approve` or `--json` is used.
 
-**ACL auto-configuration:** By default, ambit patches the Tailscale policy to add `tagOwners` and `autoApprovers` entries for the router's tag. This requires an API token with ACL write permission (`policy_file` scope). If the token lacks that permission (HTTP 403), ambit will fail and instruct the user to re-run with `--manual`. With `--manual`, the user must configure the policy themselves before the router can join the tailnet:
+**ACL auto-configuration:** By default, ambit patches the Tailscale policy to add `tagOwners` and `autoApprovers` entries for the router's tag. With `--manual`, the user must configure the policy themselves before the router can join the tailnet:
 
-1. **Visual editor** (recommended): Go to https://login.tailscale.com/admin/acls/visual/tags, click "Add tag", and add `tag:ambit-<network>` with `autogroup:admin` as the owner.
+1. **Visual Editor** (recommended): Go to https://login.tailscale.com/admin/acls/visual/tags, click "Add tag", and add `tag:ambit-<network>` with `autogroup:admin` as the owner.
 
-2. **ACL file**: Go to https://login.tailscale.com/admin/acls/file and add to tagOwners:
+2. **ACL File**: Go to https://login.tailscale.com/admin/acls/file and add to tagOwners:
 ```json
 "tagOwners": { "tag:ambit-<network>": ["autogroup:admin"] }
 ```
@@ -129,8 +129,6 @@ The command is idempotent — re-running it when rules already exist is safe (no
 ### `npx @cardelli/ambit deploy <app>.<network>`
 
 Deploys an app onto a private network. The network can be specified as part of the name (`my-app.lab`) or with `--network` (`my-app --network lab`). This is the safe alternative to `fly deploy`: it always passes `--no-public-ips` and `--flycast`, runs pre-flight checks on the fly.toml for dangerous settings, and audits the result to verify no public IPs were allocated.
-
-The actual Fly.io app name is suffixed with the router's ID (e.g. `my-app-2obeh25b`) to avoid collisions across networks. This is transparent — you always refer to the app as `my-app.lab` and DNS resolves it automatically.
 
 There are three mutually exclusive deployment modes:
 
@@ -205,7 +203,7 @@ npx @cardelli/ambit status app my-app.lab           # Detailed view of one app
 npx @cardelli/ambit status app my-app.lab --json    # JSON output
 ```
 
-Network detail includes: machine state, SOCKS5 proxy address, Tailscale IP, subnet, and apps on the network. App detail includes: machines, Flycast IPs, and router status.
+Network detail includes: machine state, SOCKS5 proxy address, Tailscale IP, subnet, and apps on the network. App detail includes: Fly.io app name, machines, Flycast IPs, and router status.
 
 ### `npx @cardelli/ambit destroy network <name>` / `npx @cardelli/ambit destroy app <app>.<network>`
 
@@ -287,6 +285,8 @@ npx @cardelli/ambit create lab
 # 2. IMPORTANT: Read the terminal output — it prints recommended acls rules
 #    with the real subnet. Surface these to the user so they can restrict
 #    who on their tailnet can reach this network (ambit never writes acls rules).
+#    Ambit will work correctly if you skip this, but if the user wants access- 
+#    control over which devices can access which networks, this is recommended.
 
 # 3. Deploy an app
 npx @cardelli/ambit deploy my-app.lab
