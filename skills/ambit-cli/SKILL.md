@@ -1,10 +1,10 @@
 ---
 name: ambit-cli
-description: 'Use this skill for any task involving the ambit CLI: creating or destroying private networks, deploying apps to a private network, checking network or router health, listing routers, or diagnosing connectivity problems. Trigger phrases include "create a network", "set up ambit", "deploy with ambit", "ambit create", "ambit deploy", "ambit doctor", "check router status", "destroy a network", and similar.'
+description: 'Use this skill for any task involving the ambit CLI: creating or destroying private networks, deploying apps to a private network, checking network or router health, listing routers, diagnosing connectivity problems, managing app secrets, or streaming app logs. Trigger phrases include "create a network", "set up ambit", "deploy with ambit", "ambit create", "ambit deploy", "ambit doctor", "check router status", "destroy a network", "managing app secrets", "streaming app logs", and similar.'
 license: MIT
 metadata:
   author: ambit
-  version: "0.3.1"
+  version: "0.4.0"
 ---
 
 # Ambit CLI
@@ -257,6 +257,49 @@ npx @cardelli/ambit doctor app my-app.lab --json    # JSON output
 - Router(s) visible in tailnet
 - Subnet routes approved (auto-approves unapproved routes)
 
+### `npx @cardelli/ambit secrets list|set|unset|deploy <app>.<network>`
+
+Manages secrets (encrypted environment variables) for workload apps.
+
+```bash
+npx @cardelli/ambit secrets list my-app.lab
+npx @cardelli/ambit secrets set my-app.lab API_KEY=abc123
+npx @cardelli/ambit secrets set my-app.lab --env .env
+npx @cardelli/ambit secrets set my-app.lab KEY1=val1 KEY2=val2 --stage
+npx @cardelli/ambit secrets unset my-app.lab API_KEY
+npx @cardelli/ambit secrets deploy my-app.lab
+```
+
+**Subcommands:**
+- `list` — Lists secret names and digests (not values)
+- `set` — Sets one or more secrets from positional `KEY=VALUE` args and/or `--env <file>` (positional args take precedence)
+- `unset` — Removes one or more secrets by name
+- `deploy` — Deploys staged secrets (from `set --stage` or `unset --stage`)
+
+**Flags:**
+- `--env <file>` — Load secrets from an env file (`set` only)
+- `--stage` — Stage changes without deploying (`set` and `unset` only)
+- `--org <org>` — Fly.io organization slug
+- `--json` — Output as JSON
+
+### `npx @cardelli/ambit logs <app>.<network>`
+
+Streams logs for a workload app. By default, logs are streamed continuously. Use `--no-tail` to fetch only buffered logs. Pipe through `less` for scrollable output.
+
+```bash
+npx @cardelli/ambit logs my-app.lab
+npx @cardelli/ambit logs my-app.lab | less +F -R          # stream with scroll (Ctrl+C to scroll, F to resume)
+npx @cardelli/ambit logs my-app.lab --no-tail | less -R   # scroll buffered logs
+npx @cardelli/ambit logs my-app.lab --region iad --json
+```
+
+**Flags:**
+- `-r, --region <r>` — Filter by region
+- `--machine <id>` — Filter by machine ID
+- `-n, --no-tail` — Only fetch buffered logs (no streaming)
+- `--org <org>` — Fly.io organization slug
+- `--json` — JSON output
+
 ## Templates
 
 Ready-to-deploy templates are available at `ToxicPine/ambit-templates`:
@@ -326,6 +369,14 @@ npx @cardelli/ambit doctor network lab      # Check all the common failure point
 npx @cardelli/ambit status network lab      # Detailed network/router state
 npx @cardelli/ambit status app my-app.lab   # Check a specific app
 npx @cardelli/ambit list apps lab           # List all apps on a network
+```
+
+### Managing Secrets
+```bash
+npx @cardelli/ambit secrets set my-app.lab API_KEY=abc123 DB_URL=postgres://...
+npx @cardelli/ambit secrets set my-app.lab --env .env     # Load from env file
+npx @cardelli/ambit secrets list my-app.lab               # Check what's set
+npx @cardelli/ambit logs my-app.lab --no-tail             # Check app picked them up
 ```
 
 ### Tearing Down
