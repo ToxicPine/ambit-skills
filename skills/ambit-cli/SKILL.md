@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.4.0"
+  version: "0.4.1"
 ---
 
 # Ambit CLI
@@ -37,15 +37,58 @@ Ambit creates a router on Fly.io that joins the user's Tailscale network and adv
 
 ## Prerequisites
 
-- `flyctl` installed and authenticated (`fly auth login`)
+- `flyctl` installed (`brew install flyctl` or https://fly.io/docs/flyctl/install/)
 - Tailscale installed and connected (`tailscale up`)
-- A Tailscale API access token (`tskey-api-...`) — create one at https://login.tailscale.com/admin/settings/keys
+- Run `ambit auth login` to authenticate with both Fly.io and Tailscale
 
 ## Commands
 
+### `npx @cardelli/ambit auth login`
+
+Authenticates with both Fly.io and Tailscale. Only prompts for credentials that are missing or invalid — existing valid tokens are preserved. This is the first command to run before using any other ambit command.
+
+```bash
+npx @cardelli/ambit auth login
+npx @cardelli/ambit auth login --ts-api-key tskey-api-... --fly-api-key fo1_...
+```
+
+**Flags:**
+- `--ts-api-key <key>` — Tailscale API access token (tskey-api-...)
+- `--fly-api-key <token>` — Fly.io API token
+- `--json` — Output as JSON
+
+**What it does:**
+1. Fly.io: validates stored token or opens browser for interactive login, stores the token
+2. Tailscale: validates stored API key or prompts for one, validates format + API, stores the key
+
+### `npx @cardelli/ambit auth whoami`
+
+Shows the current authentication status for both Fly.io and Tailscale.
+
+```bash
+npx @cardelli/ambit auth whoami
+npx @cardelli/ambit auth whoami --json
+```
+
+**Flags:**
+- `--json` — Output as JSON
+
+### `npx @cardelli/ambit auth logout`
+
+Clears all stored credentials (from `~/.config/ambit/credentials.json`) and logs out of Fly.io.
+
+```bash
+npx @cardelli/ambit auth logout
+npx @cardelli/ambit auth logout --yes
+```
+
+**Flags:**
+- `-y, --yes` — Skip confirmation prompt
+- `--json` — Output as JSON
+
 ### `npx @cardelli/ambit create <network>`
 
-Creates a new private network. This is the first command to run when setting up a new ambit. It deploys a router on Fly.io, connects it to the user's Tailscale network, and configures split DNS so apps on the network are reachable by name.
+Creates a new private network. Deploys a router on Fly.io, connects it to the user's Tailscale network, and configures split DNS so apps on the network are reachable by name. Requires `ambit auth login` first.
 
 ```bash
 npx @cardelli/ambit create lab
@@ -56,7 +99,6 @@ npx @cardelli/ambit create lab --no-auto-approve
 **Flags:**
 - `--org <org>` — Fly.io organization slug
 - `--region <region>` — Fly.io region (default: `iad`)
-- `--api-key <key>` — Tailscale API access token (prompted interactively if omitted)
 - `--tag <tag>` — Tailscale ACL tag for the router (default: `tag:ambit-<network>`)
 - `--manual` — Skip automatic Tailscale ACL configuration (tagOwners + autoApprovers)
 - `--no-auto-approve` — Skip waiting for router and approving routes (deploy only, configure later)
@@ -322,24 +364,27 @@ npx @cardelli/ambit deploy my-gateway.lab --template ToxicPine/ambit-openclaw
 
 ### First-Time Setup
 ```bash
-# 1. Create the router — ambit auto-configures ACL (tagOwners + autoApprovers)
+# 1. Authenticate with Fly.io and Tailscale
+npx @cardelli/ambit auth login
+
+# 2. Create the router — ambit auto-configures ACL (tagOwners + autoApprovers)
 npx @cardelli/ambit create lab
 
-# 2. IMPORTANT: Read the terminal output — it prints recommended acls rules
+# 3. IMPORTANT: Read the terminal output — it prints recommended acls rules
 #    with the real subnet. Surface these to the user so they can restrict
 #    who on their tailnet can reach this network (ambit never writes acls rules).
-#    Ambit will work correctly if you skip this, but if the user wants access- 
+#    Ambit will work correctly if you skip this, but if the user wants access-
 #    control over which devices can access which networks, this is recommended.
 
-# 3. Deploy an app
+# 4. Deploy an app
 npx @cardelli/ambit deploy my-app.lab
 
-# 4. App is now reachable as http://my-app.lab from any device on the tailnet
+# 5. App is now reachable as http://my-app.lab from any device on the tailnet
 
-# 5. Share the network with a group (adds acls rules automatically):
+# 6. Share the network with a group (adds acls rules automatically):
 npx @cardelli/ambit share lab group:team
 
-# 6. To fine-tune access further:
+# 7. To fine-tune access further:
 #    - Invite people: https://login.tailscale.com/admin/users
 #    - Edit access rules: https://login.tailscale.com/admin/acls/visual/general-access-rules
 
