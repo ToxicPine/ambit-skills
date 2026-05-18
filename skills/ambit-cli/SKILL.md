@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.4.1"
+  version: "0.4.6"
 ---
 
 # Ambit CLI
@@ -45,21 +45,24 @@ Ambit creates a router on Fly.io that joins the user's Tailscale network and adv
 
 ### `npx @cardelli/ambit auth login`
 
-Authenticates with both Fly.io and Tailscale. Only prompts for credentials that are missing or invalid — existing valid tokens are preserved. This is the first command to run before using any other ambit command.
+Authenticates with both Fly.io and Tailscale. Tailscale API keys are stored per Fly identity: organization slugs use their global Fly org slug, and the `personal` org is scoped to the authenticated Fly user email. This is the first command to run before using any other ambit command for that Fly org.
 
 ```bash
 npx @cardelli/ambit auth login
+npx @cardelli/ambit auth login --org my-org
 npx @cardelli/ambit auth login --ts-api-key tskey-api-... --fly-api-key fo1_...
 ```
 
 **Flags:**
 - `--ts-api-key <key>` — Tailscale API access token (tskey-api-...)
 - `--fly-api-key <token>` — Fly.io API token
+- `--org <org>` — Fly.io organization slug for this Tailscale key
 - `--json` — Output as JSON
 
 **What it does:**
-1. Fly.io: validates stored token or opens browser for interactive login, stores the token
-2. Tailscale: validates stored API key or prompts for one, validates format + API, stores the key
+1. Fly.io: validates stored token or opens browser for interactive login
+2. Resolves the Fly identity scope: `fly:org:<slug>` or `fly:user:<email>` for `personal`
+3. Tailscale: validates the API key for that Fly identity or prompts for one, validates format + API, stores the key
 
 ### `npx @cardelli/ambit auth whoami`
 
@@ -67,10 +70,12 @@ Shows the current authentication status for both Fly.io and Tailscale.
 
 ```bash
 npx @cardelli/ambit auth whoami
+npx @cardelli/ambit auth whoami --org my-org
 npx @cardelli/ambit auth whoami --json
 ```
 
 **Flags:**
+- `--org <org>` — Fly.io organization slug to check
 - `--json` — Output as JSON
 
 ### `npx @cardelli/ambit auth logout`
@@ -264,13 +269,13 @@ npx @cardelli/ambit destroy network lab --manual   # skip ACL cleanup
 2. Clears split DNS configuration
 3. Removes the Tailscale device
 4. Destroys the Fly.io app
-5. Auto-cleans ACL: removes the tag from `tagOwners` and `autoApprovers` in the Tailscale policy (skipped with `--manual`)
+5. Auto-cleans ACL: removes the tag from `tagOwners`, `autoApprovers`, and tag-referencing `acls` rules in the Tailscale policy (skipped with `--manual`)
 
 `--manual` skips the ACL cleanup step (step 5). Use it when the API token lacks ACL write permission, or when the user manages the policy themselves. If ACL cleanup fails with a 403, ambit warns and suggests re-running with `--manual`.
 
-After destroying, the user still needs to manually remove any `acls` rules referencing the tag (ambit never touches `acls` entries automatically). Tell them they can do this either:
-- **Visual editor**: Go to https://login.tailscale.com/admin/acls/visual and remove rules from the Access Rules section
-- **ACL file**: Go to https://login.tailscale.com/admin/acls/file and remove entries referencing `tag:ambit-<network>` from `acls`
+After destroying, the user may still need to manually remove subnet-only `acls` rules for the destroyed network. Ambit removes access-rule references to `tag:ambit-<network>`, but subnet-only rules such as `fdaa:.../48:*` do not reference the tag. Tell them they can do this either:
+- **Visual editor**: Go to https://login.tailscale.com/admin/acls/visual and remove subnet rules from the Access Rules section
+- **ACL file**: Go to https://login.tailscale.com/admin/acls/file and remove subnet-only entries for the destroyed network from `acls`
 
 **Destroy an app** — removes a workload app from a network.
 
@@ -428,11 +433,11 @@ npx @cardelli/ambit logs my-app.lab --no-tail             # Check app picked the
 ```bash
 npx @cardelli/ambit destroy app my-app.lab        # Remove an app
 npx @cardelli/ambit destroy network lab           # Remove the whole network
-# ambit auto-removes tag:ambit-lab from tagOwners and autoApprovers in the ACL
+# ambit auto-removes tag:ambit-lab from tagOwners, autoApprovers, and tag-referencing acls rules
 
-# The user still needs to manually remove any acls rules referencing the tag:
+# The user may still need to manually remove subnet-only acls rules:
 #   Visual editor: https://login.tailscale.com/admin/acls/visual (Access Rules section)
-#   Or ACL file:   remove entries referencing tag:ambit-lab from acls
+#   Or ACL file:   remove subnet-only entries for the destroyed network from acls
 
 # If the API token lacks ACL write permission, use --manual to skip ACL cleanup:
 # npx @cardelli/ambit destroy network lab --manual
@@ -440,7 +445,7 @@ npx @cardelli/ambit destroy network lab           # Remove the whole network
 
 ## ACL Configuration Guide
 
-Ambit automatically manages `tagOwners` and `autoApprovers` in the Tailscale policy by default. It never touches `acls` (access rules) — those are user-authored and must be configured manually.
+Ambit automatically manages `tagOwners` and `autoApprovers` in the Tailscale policy by default. It also removes tag-referencing `acls` access rules during `destroy network` so the tag owner can be removed cleanly. Subnet-only access rules are user-authored and may still need manual cleanup.
 
 **What ambit manages automatically (default):**
 - `tagOwners`: adds/removes the router tag on `create`/`destroy network`
