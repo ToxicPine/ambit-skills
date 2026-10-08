@@ -4,7 +4,7 @@ description: 'Use this skill for any task involving the ambit CLI: creating or d
 license: MIT
 metadata:
   author: ambit
-  version: "0.4.6"
+  version: "0.4.7"
 ---
 
 # Ambit CLI
